@@ -2,6 +2,7 @@ package com.example.finansapii.controller;
 
 import com.example.finansapii.dto.TaksitCreateRequest;
 import com.example.finansapii.dto.TaksitResponse;
+import com.example.finansapii.security.CurrentUser;
 import com.example.finansapii.service.TaksitService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -19,17 +20,14 @@ public class TaksitController {
     }
 
     @PostMapping
-    public TaksitResponse create(
-            @RequestHeader("X-USER-ID") Long kullaniciId,
-            @Valid @RequestBody TaksitCreateRequest req
-    ) {
+    public TaksitResponse create(@Valid @RequestBody TaksitCreateRequest req) {
+        Long kullaniciId = CurrentUser.id();
         return taksitService.create(kullaniciId, req);
     }
 
     @GetMapping("/my")
-    public List<TaksitResponse> my(
-            @RequestHeader("X-USER-ID") Long kullaniciId
-    ) {
+    public List<TaksitResponse> my() {
+        Long kullaniciId = CurrentUser.id();
         return taksitService.my(kullaniciId);
     }
 }

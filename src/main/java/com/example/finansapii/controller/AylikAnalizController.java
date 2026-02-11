@@ -1,6 +1,7 @@
 package com.example.finansapii.controller;
 
 import com.example.finansapii.dto.AylikAnalizResponse;
+import com.example.finansapii.security.CurrentUser;
 import com.example.finansapii.service.AylikAnalizService;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,9 +18,8 @@ public class AylikAnalizController {
     }
 
     @GetMapping
-    public List<AylikAnalizResponse> getMyAnaliz(
-            @RequestHeader("X-USER-ID") Long kullaniciId
-    ) {
+    public List<AylikAnalizResponse> getMyAnaliz() {
+        Long kullaniciId = CurrentUser.id();
         return service.getForUser(kullaniciId);
     }
 }

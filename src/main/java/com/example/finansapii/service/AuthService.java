@@ -1,79 +1,62 @@
 package com.example.finansapii.service;
 
 import com.example.finansapii.dto.*;
-import com.example.finansapii.entity.AylikAnaliz;
 import com.example.finansapii.entity.User;
-import com.example.finansapii.repository.AylikAnalizRepository;
 import com.example.finansapii.repository.UserRepository;
+import com.example.finansapii.security.JwtService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
 
 @Service
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final AylikAnalizRepository aylikAnalizRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
-    public AuthService(UserRepository userRepository,
-                       AylikAnalizRepository aylikAnalizRepository,
-                       PasswordEncoder passwordEncoder) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
         this.userRepository = userRepository;
-        this.aylikAnalizRepository = aylikAnalizRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
-    // ✅ KAYIT
     @Transactional
-    public AuthResponse register(RegisterRequest req) {
+    public AuthResponse register(RegisterRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
 
-        if (userRepository.findByEmail(req.getEmail()).isPresent()) {
-            throw new RuntimeException("Bu email zaten kayıtlı");
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Bu email zaten kayıtlı");
         }
 
-        User user = new User();
-        user.setAd(req.getAd());
-        user.setSoyad(req.getSoyad());
-        user.setEmail(req.getEmail().toLowerCase());
-        user.setTelefon(req.getTelefon());
-        user.setSifreHash(passwordEncoder.encode(req.getParola()));
+        User u = new User();
+        u.setAd(request.getAd().trim());
+        u.setSoyad(request.getSoyad().trim());
+        u.setEmail(email);
+        u.setTelefon(request.getTelefon());
+        u.setSifreHash(passwordEncoder.encode(request.getParola())); // ✅ parola hash
 
-        User savedUser = userRepository.save(user);
+        // Aile yoksa null bırak (senin tablona göre)
+        // u.setAileId(null);
 
-        // ✅ kullanıcı oluşunca otomatik aylık analiz satırı oluştur
-        AylikAnaliz analiz = new AylikAnaliz();
-        analiz.setKullaniciId(savedUser.getId());
-        analiz.setYilAy(LocalDate.now().withDayOfMonth(1));
-        analiz.setAylikGelir(BigDecimal.ZERO);
-        analiz.setAylikGider(BigDecimal.ZERO);
+        User saved = userRepository.save(u);
 
-        aylikAnalizRepository.save(analiz);
-
-        return new AuthResponse(
-                "Kayıt başarılı",
-                savedUser.getId(),
-                savedUser.getEmail()
-        );
+        String token = jwtService.generateToken(saved.getId(), saved.getEmail());
+        return new AuthResponse("Kayıt başarılı", saved.getId(), saved.getEmail(), token);
     }
 
-    // GİRİŞ
-    public AuthResponse login(LoginRequest req) {
+    public AuthResponse login(LoginRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
 
-        User user = userRepository.findByEmail(req.getEmail().toLowerCase())
-                .orElseThrow(() -> new RuntimeException("Email veya parola hatalı"));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı"));
 
-        if (!passwordEncoder.matches(req.getParola(), user.getSifreHash())) {
-            throw new RuntimeException("Email veya parola hatalı");
+        // ✅ hash kontrol
+        if (!passwordEncoder.matches(request.getParola(), user.getSifreHash())) {
+            throw new RuntimeException("Hatalı parola");
         }
 
-        return new AuthResponse(
-                "Giriş başarılı",
-                user.getId(),
-                user.getEmail()
-        );
+        String token = jwtService.generateToken(user.getId(), user.getEmail());
+        return new AuthResponse("Giriş başarılı", user.getId(), user.getEmail(), token);
     }
 }

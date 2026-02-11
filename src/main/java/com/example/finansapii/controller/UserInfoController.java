@@ -1,6 +1,7 @@
 package com.example.finansapii.controller;
 
 import com.example.finansapii.dto.UserInfoResponse;
+import com.example.finansapii.security.CurrentUser;
 import com.example.finansapii.service.UserInfoService;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,7 +16,8 @@ public class UserInfoController {
     }
 
     @GetMapping("/userinfo")
-    public UserInfoResponse userinfo(@RequestHeader("X-USER-ID") Long userId) {
+    public UserInfoResponse userinfo() {
+        Long userId = CurrentUser.id();
         return userInfoService.getUserInfo(userId);
     }
 }

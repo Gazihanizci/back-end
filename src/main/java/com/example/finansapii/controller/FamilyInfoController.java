@@ -1,6 +1,7 @@
 package com.example.finansapii.controller;
 
 import com.example.finansapii.dto.FamilyInfoResponse;
+import com.example.finansapii.security.CurrentUser;
 import com.example.finansapii.service.FamilyInfoService;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,9 +17,8 @@ public class FamilyInfoController {
 
     // GET /api/familyinfo
     @GetMapping("/familyinfo")
-    public FamilyInfoResponse getFamilyInfo(
-            @RequestHeader("X-USER-ID") Long requestUserId
-    ) {
+    public FamilyInfoResponse getFamilyInfo() {
+        Long requestUserId = CurrentUser.id();
         return familyInfoService.getFamilyInfo(requestUserId);
     }
 }

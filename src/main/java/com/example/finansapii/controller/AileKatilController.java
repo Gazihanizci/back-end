@@ -1,6 +1,7 @@
 package com.example.finansapii.controller;
 
 import com.example.finansapii.dto.AileKatilRequest;
+import com.example.finansapii.security.CurrentUser;
 import com.example.finansapii.service.AileKatilService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -16,10 +17,8 @@ public class AileKatilController {
     }
 
     @PostMapping
-    public void katil(
-            @RequestHeader("X-USER-ID") Long kullaniciId,
-            @Valid @RequestBody AileKatilRequest req
-    ) {
+    public void katil(@Valid @RequestBody AileKatilRequest req) {
+        Long kullaniciId = CurrentUser.id();
         aileKatilService.katil(kullaniciId, req);
     }
 }

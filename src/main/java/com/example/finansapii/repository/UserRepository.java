@@ -8,7 +8,9 @@ import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
-
-    // ✅ ŞART
+    boolean existsByEmail(String email);
     List<User> findAllByAileId(Long aileId);
+    @org.springframework.data.jpa.repository.Query("select u.aileId from User u where u.id = :userId")
+    java.util.Optional<Long> findAileIdByUserId(@org.springframework.data.repository.query.Param("userId") Long userId);
+
 }

@@ -1,0 +1,63 @@
+package com.example.finansapii.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+import java.util.Map;
+
+@Service
+public class JwtService {
+
+    private final SecretKey key;
+    private final long expMinutes;
+
+    public JwtService(
+            @Value("${app.jwt.secret}") String secret,
+            @Value("${app.jwt.expMinutes}") long expMinutes
+    ) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expMinutes = expMinutes;
+    }
+
+    public String generateToken(Long kullaniciId, String email) {
+        Instant now = Instant.now();
+        Instant exp = now.plus(expMinutes, ChronoUnit.MINUTES);
+
+        return Jwts.builder()
+                .subject(String.valueOf(kullaniciId)) // sub = userId
+                .claims(Map.of("email", email))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(exp))
+                .signWith(key)
+                .compact();
+    }
+
+    public Claims parseClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    public Long extractUserId(String token) {
+        return Long.parseLong(parseClaims(token).getSubject());
+    }
+
+    public boolean isValid(String token) {
+        try {
+            parseClaims(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+}

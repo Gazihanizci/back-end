@@ -1,13 +1,15 @@
 package com.example.finansapii.controller;
-import com.example.finansapii.dto.HesapBakiyeUpdateRequest;
 
+import com.example.finansapii.dto.HesapBakiyeUpdateRequest;
 import com.example.finansapii.dto.HesapCreateRequest;
 import com.example.finansapii.dto.HesapResponse;
+import com.example.finansapii.security.CurrentUser;
 import com.example.finansapii.service.HesapService;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
-import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/hesaplar")
 public class HesapController {
@@ -19,30 +21,29 @@ public class HesapController {
     }
 
     @PostMapping
-    public HesapResponse create(
-            @RequestHeader("X-USER-ID") Long kullaniciId,
-            @Valid @RequestBody HesapCreateRequest req
-    ) {
+    public HesapResponse create(@Valid @RequestBody HesapCreateRequest req) {
+        Long kullaniciId = CurrentUser.id();
         return hesapService.create(kullaniciId, req);
     }
 
     @GetMapping("/current")
-    public HesapResponse current(@RequestHeader("X-USER-ID") Long kullaniciId) {
+    public HesapResponse current() {
+        Long kullaniciId = CurrentUser.id();
         return hesapService.getCurrent(kullaniciId);
     }
+
     @PatchMapping("/{hesapId}/bakiye")
     public HesapResponse updateBakiye(
-            @RequestHeader("X-USER-ID") Long kullaniciId,
             @PathVariable Long hesapId,
             @Valid @RequestBody HesapBakiyeUpdateRequest req
     ) {
+        Long kullaniciId = CurrentUser.id();
         return hesapService.updateBakiye(kullaniciId, hesapId, req);
     }
 
-    // ✅ YENİ ENDPOINT (TÜM HESAPLAR)
     @GetMapping
-    public List<HesapResponse> getAll(@RequestHeader("X-USER-ID") Long kullaniciId) {
+    public List<HesapResponse> getAll() {
+        Long kullaniciId = CurrentUser.id();
         return hesapService.getAll(kullaniciId);
     }
 }
-
