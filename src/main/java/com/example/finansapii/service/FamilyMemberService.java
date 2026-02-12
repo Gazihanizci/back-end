@@ -17,6 +17,51 @@ public class FamilyMemberService {
         this.userRepository = userRepository;
         this.aileRepository = aileRepository;
     }
+    @Transactional
+    public void leaveFamily(Long userId, Long aileId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı: " + userId));
+
+        Aile aile = aileRepository.findById(aileId)
+                .orElseThrow(() -> new RuntimeException("Aile bulunamadı: " + aileId));
+
+        // ✅ ekstra garanti
+        if (user.getAileId() == null || !user.getAileId().equals(aileId)) {
+            throw new RuntimeException("Bu aileye üye değilsin.");
+        }
+
+        boolean isOwner = aile.getAileSahibiKullaniciId().equals(userId);
+
+        // ✅ Aile sahibi DEĞİLSE: direkt ayrıl
+        if (!isOwner) {
+            user.setAileId(null);
+            userRepository.save(user);
+            return;
+        }
+
+        // ✅ Aile sahibi İSE:
+        long memberCount = userRepository.countByAileId(aileId);
+
+        // Sadece kendisi varsa: aileyi kapat
+        if (memberCount <= 1) {
+            // önce kullanıcıyı aileden çıkar
+            user.setAileId(null);
+            userRepository.save(user);
+
+            // (güvenli) aileye bağlı başka kullanıcı kalmasın diye temizlik
+            userRepository.clearFamilyIdByAileId(aileId);
+
+            // aile kaydını sil / kapat
+            aileRepository.delete(aile);
+            return;
+        }
+
+        // Başka üyeler varsa: önce sahiplik devri şart
+        throw new RuntimeException("Aile sahibi ayrılmadan önce sahipliği başka bir üyeye devretmelidir.");
+    }
+
+
 
     @Transactional
     public void removeMember(Long requestUserId, Long aileId, Long targetUserId) {
@@ -57,4 +102,30 @@ public class FamilyMemberService {
         // aile.setAileUyeSayisi(count);
         // aileRepository.save(aile);
     }
+    @Transactional
+    public void transferOwnership(Long requestUserId, Long aileId, Long newOwnerUserId) {
+
+        Aile aile = aileRepository.findById(aileId)
+                .orElseThrow(() -> new RuntimeException("Aile bulunamadı: " + aileId));
+
+        // ✅ sadece mevcut aile sahibi devredebilir
+        if (!aile.getAileSahibiKullaniciId().equals(requestUserId)) {
+            throw new RuntimeException("Sahipliği sadece mevcut aile sahibi devredebilir.");
+        }
+
+        // ✅ kendine devredemez
+        if (requestUserId.equals(newOwnerUserId)) {
+            throw new RuntimeException("Sahiplik kendine devredilemez.");
+        }
+
+        // ✅ yeni sahip gerçekten bu ailenin üyesi mi?
+        boolean member = userRepository.existsByIdAndAileId(newOwnerUserId, aileId);
+        if (!member) {
+            throw new RuntimeException("Yeni sahip bu ailenin üyesi değil.");
+        }
+
+        aile.setAileSahibiKullaniciId(newOwnerUserId);
+        aileRepository.save(aile);
+    }
+
 }

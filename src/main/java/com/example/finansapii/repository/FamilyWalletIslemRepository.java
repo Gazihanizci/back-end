@@ -11,19 +11,25 @@ import java.util.List;
 
 public interface FamilyWalletIslemRepository extends JpaRepository<Islem, Long> {
 
-    // ✅ Aile bazında kategori özet (hangi kategoriye ne kadar)
+    // ✅ Aile bazında kategori özet (normal + özel)
     @Query(value = """
         SELECT
-          k.kategori_id AS kategoriId,
-          k.kategori_ad AS kategoriAd,
-          k.tip         AS tip,
+          i.kategori_id AS kategoriId,
+          COALESCE(k.kategori_ad, ok.kategori_adi, i.kategori_adi_snapshot) AS kategoriAd,
+          COALESCE(k.tip, ok.tip, 'UNKNOWN') AS tip,
           COALESCE(SUM(i.tutar),0) AS toplamTutar
         FROM islemler i
-        JOIN kategoriler k ON k.kategori_id = i.kategori_id
+        LEFT JOIN kategoriler k
+               ON k.kategori_id = i.kategori_id
+        LEFT JOIN ozel_kategoriler ok
+               ON ok.ozel_kategori_id = i.kategori_id
         WHERE i.aile_id = :aileId
           AND i.islem_tarihi >= :startDt
           AND i.islem_tarihi <  :endDt
-        GROUP BY k.kategori_id, k.kategori_ad, k.tip
+        GROUP BY
+          i.kategori_id,
+          COALESCE(k.kategori_ad, ok.kategori_adi, i.kategori_adi_snapshot),
+          COALESCE(k.tip, ok.tip, 'UNKNOWN')
         ORDER BY COALESCE(SUM(i.tutar),0) DESC
     """, nativeQuery = true)
     List<FamilyWalletCategorySummaryView> sumByCategoryFamilyMonthly(
@@ -32,20 +38,27 @@ public interface FamilyWalletIslemRepository extends JpaRepository<Islem, Long> 
             @Param("endDt") LocalDateTime endDt
     );
 
-    // ✅ Üye + kategori (kim hangi kategoriye ne kadar)
+    // ✅ Üye + kategori (normal + özel)
     @Query(value = """
         SELECT
           i.kullanici_id AS kullaniciId,
-          k.kategori_id  AS kategoriId,
-          k.kategori_ad  AS kategoriAd,
-          k.tip          AS tip,
+          i.kategori_id  AS kategoriId,
+          COALESCE(k.kategori_ad, ok.kategori_adi, i.kategori_adi_snapshot) AS kategoriAd,
+          COALESCE(k.tip, ok.tip, 'UNKNOWN') AS tip,
           COALESCE(SUM(i.tutar),0) AS toplamTutar
         FROM islemler i
-        JOIN kategoriler k ON k.kategori_id = i.kategori_id
+        LEFT JOIN kategoriler k
+               ON k.kategori_id = i.kategori_id
+        LEFT JOIN ozel_kategoriler ok
+               ON ok.ozel_kategori_id = i.kategori_id
         WHERE i.aile_id = :aileId
           AND i.islem_tarihi >= :startDt
           AND i.islem_tarihi <  :endDt
-        GROUP BY i.kullanici_id, k.kategori_id, k.kategori_ad, k.tip
+        GROUP BY
+          i.kullanici_id,
+          i.kategori_id,
+          COALESCE(k.kategori_ad, ok.kategori_adi, i.kategori_adi_snapshot),
+          COALESCE(k.tip, ok.tip, 'UNKNOWN')
         ORDER BY i.kullanici_id ASC, COALESCE(SUM(i.tutar),0) DESC
     """, nativeQuery = true)
     List<FamilyWalletMemberCategoryView> sumMemberByCategoryFamilyMonthly(
