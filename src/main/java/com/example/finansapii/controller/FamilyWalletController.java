@@ -56,4 +56,5 @@ public class FamilyWalletController {
 
         return familyWalletService.getMonthly(aileId, yilAy);
     }
+
 }
