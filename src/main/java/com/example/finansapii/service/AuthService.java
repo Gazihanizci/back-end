@@ -1,6 +1,8 @@
 package com.example.finansapii.service;
 
-import com.example.finansapii.dto.*;
+import com.example.finansapii.dto.AuthResponse;
+import com.example.finansapii.dto.LoginRequest;
+import com.example.finansapii.dto.RegisterRequest;
 import com.example.finansapii.entity.User;
 import com.example.finansapii.repository.UserRepository;
 import com.example.finansapii.security.JwtService;
@@ -15,7 +17,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtService jwtService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -34,15 +38,20 @@ public class AuthService {
         u.setSoyad(request.getSoyad().trim());
         u.setEmail(email);
         u.setTelefon(request.getTelefon());
-        u.setSifreHash(passwordEncoder.encode(request.getParola())); // ✅ parola hash
-
-        // Aile yoksa null bırak (senin tablona göre)
-        // u.setAileId(null);
+        u.setSifreHash(passwordEncoder.encode(request.getParola())); // parola hash
 
         User saved = userRepository.save(u);
 
-        String token = jwtService.generateToken(saved.getId(), saved.getEmail());
-        return new AuthResponse("Kayıt başarılı", saved.getId(), saved.getEmail(), token);
+        String accessToken = jwtService.generateAccessToken(saved.getId(), saved.getEmail());
+        String refreshToken = jwtService.generateRefreshToken(saved.getId());
+
+        return new AuthResponse(
+                "Kayıt başarılı",
+                saved.getId(),
+                saved.getEmail(),
+                accessToken,
+                refreshToken
+        );
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -51,12 +60,19 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı"));
 
-        // ✅ hash kontrol
         if (!passwordEncoder.matches(request.getParola(), user.getSifreHash())) {
             throw new RuntimeException("Hatalı parola");
         }
 
-        String token = jwtService.generateToken(user.getId(), user.getEmail());
-        return new AuthResponse("Giriş başarılı", user.getId(), user.getEmail(), token);
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail());
+        String refreshToken = jwtService.generateRefreshToken(user.getId());
+
+        return new AuthResponse(
+                "Giriş başarılı",
+                user.getId(),
+                user.getEmail(),
+                accessToken,
+                refreshToken
+        );
     }
 }

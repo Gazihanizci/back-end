@@ -16,46 +16,116 @@ import java.util.Map;
 @Service
 public class JwtService {
 
-    private final SecretKey key;
-    private final long expMinutes;
+    private final SecretKey accessKey;
+    private final SecretKey refreshKey;
+
+    private final long accessExpMinutes;
+    private final long refreshExpDays;
 
     public JwtService(
-            @Value("${app.jwt.secret}") String secret,
-            @Value("${app.jwt.expMinutes}") long expMinutes
+            @Value("${app.jwt.accessSecret}") String accessSecret,
+            @Value("${app.jwt.refreshSecret}") String refreshSecret,
+            @Value("${app.jwt.accessExpMinutes}") long accessExpMinutes,
+            @Value("${app.jwt.refreshExpDays}") long refreshExpDays
     ) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.expMinutes = expMinutes;
+        this.accessKey = Keys.hmacShaKeyFor(accessSecret.getBytes(StandardCharsets.UTF_8));
+        this.refreshKey = Keys.hmacShaKeyFor(refreshSecret.getBytes(StandardCharsets.UTF_8));
+        this.accessExpMinutes = accessExpMinutes;
+        this.refreshExpDays = refreshExpDays;
     }
 
-    public String generateToken(Long kullaniciId, String email) {
+    // =========================
+    // TOKEN GENERATION
+    // =========================
+
+    public String generateAccessToken(Long kullaniciId, String email) {
         Instant now = Instant.now();
-        Instant exp = now.plus(expMinutes, ChronoUnit.MINUTES);
+        Instant exp = now.plus(accessExpMinutes, ChronoUnit.MINUTES);
 
         return Jwts.builder()
                 .subject(String.valueOf(kullaniciId)) // sub = userId
-                .claims(Map.of("email", email))
+                .claims(Map.of(
+                        "email", email,
+                        "typ", "access"
+                ))
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))
-                .signWith(key)
+                .signWith(accessKey)
                 .compact();
     }
 
-    public Claims parseClaims(String token) {
+    public String generateRefreshToken(Long kullaniciId) {
+        Instant now = Instant.now();
+        Instant exp = now.plus(refreshExpDays, ChronoUnit.DAYS);
+
+        return Jwts.builder()
+                .subject(String.valueOf(kullaniciId)) // sub = userId
+                .claims(Map.of("typ", "refresh"))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(exp))
+                .signWith(refreshKey)
+                .compact();
+    }
+
+    // =========================
+    // CLAIMS PARSING
+    // =========================
+
+    public Claims parseAccessClaims(String token) {
         return Jwts.parser()
-                .verifyWith(key)
+                .verifyWith(accessKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
     }
 
-    public Long extractUserId(String token) {
-        return Long.parseLong(parseClaims(token).getSubject());
+    public Claims parseRefreshClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(refreshKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
-    public boolean isValid(String token) {
+    // =========================
+    // EXTRACTORS
+    // =========================
+
+    public Long extractUserIdFromAccess(String token) {
+        return Long.parseLong(parseAccessClaims(token).getSubject());
+    }
+
+    public Long extractUserIdFromRefresh(String token) {
+        return Long.parseLong(parseRefreshClaims(token).getSubject());
+    }
+
+    public String extractTypeFromAccess(String token) {
+        return parseAccessClaims(token).get("typ", String.class);
+    }
+
+    public String extractTypeFromRefresh(String token) {
+        return parseRefreshClaims(token).get("typ", String.class);
+    }
+
+    // =========================
+    // VALIDATORS
+    // =========================
+
+    public boolean isAccessValid(String token) {
         try {
-            parseClaims(token);
-            return true;
+            Claims c = parseAccessClaims(token);
+            String typ = c.get("typ", String.class);
+            return "access".equals(typ);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isRefreshValid(String token) {
+        try {
+            Claims c = parseRefreshClaims(token);
+            String typ = c.get("typ", String.class);
+            return "refresh".equals(typ);
         } catch (Exception e) {
             return false;
         }

@@ -32,6 +32,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String auth = request.getHeader(HttpHeaders.AUTHORIZATION);
 
+        // Authorization yoksa devam
         if (auth == null || !auth.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -39,12 +40,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String token = auth.substring("Bearer ".length()).trim();
 
-        if (!jwtService.isValid(token)) {
+        // ✅ SADECE ACCESS TOKEN kabul et
+        if (!jwtService.isAccessValid(token)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        Long userId = jwtService.extractUserId(token);
+        Long userId = jwtService.extractUserIdFromAccess(token);
 
         var authentication = new UsernamePasswordAuthenticationToken(
                 userId, // principal = userId
