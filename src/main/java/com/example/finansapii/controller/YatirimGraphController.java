@@ -1,6 +1,7 @@
 package com.example.finansapii.controller;
 
 import com.example.finansapii.dto.YatirimGraphResponse;
+import com.example.finansapii.dto.YatirimGroupBy;
 import com.example.finansapii.service.YatirimGraphService;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,9 +15,9 @@ public class YatirimGraphController {
         this.service = service;
     }
 
-
+    // GET /api/yatirim/graph?groupBy=HESAP|VARLIK
     @GetMapping("/graph")
-    public YatirimGraphResponse graph(@RequestParam(required = false) String groupBy) {
+    public YatirimGraphResponse graph(@RequestParam(required = false) YatirimGroupBy groupBy) {
         return service.getGraph(groupBy);
     }
 }

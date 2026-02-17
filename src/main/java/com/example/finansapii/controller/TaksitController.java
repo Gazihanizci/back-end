@@ -24,6 +24,11 @@ public class TaksitController {
         Long kullaniciId = CurrentUser.id();
         return taksitService.create(kullaniciId, req);
     }
+    @PostMapping("/{id}/finish-now")
+    public TaksitResponse finishNow(@PathVariable Long id) {
+        Long kullaniciId = CurrentUser.id();
+        return taksitService.finishNow(kullaniciId, id);
+    }
 
     @GetMapping("/my")
     public List<TaksitResponse> my() {

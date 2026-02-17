@@ -6,7 +6,8 @@ import com.example.finansapii.entity.SabitOdeme;
 import com.example.finansapii.repository.SabitOdemeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @Service
@@ -33,7 +34,16 @@ public class SabitOdemeService {
         SabitOdeme saved = repo.save(s);
         return toResponse(saved);
     }
-
+    @Transactional
+    public SabitOdemeResponse setAktif(Long kullaniciId, Long odemeId, boolean aktif) {
+        int updated = repo.setAktif(odemeId, kullaniciId, aktif);
+        if (updated == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Sabit ödeme bulunamadı");
+        }
+        SabitOdeme s = repo.findByOdemeIdAndKullaniciId(odemeId, kullaniciId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sabit ödeme bulunamadı"));
+        return toResponse(s);
+    }
     @Transactional(readOnly = true)
     public List<SabitOdemeResponse> listMine(Long kullaniciId) {
         return repo.findByKullaniciIdOrderBySonOdemeGunuAsc(kullaniciId)

@@ -35,4 +35,18 @@ public class SabitOdemeController {
         Long kullaniciId = CurrentUser.id(); // ✅ JWT'den geliyor
         return service.listMine(kullaniciId);
     }
+    // PATCH /api/sabitodemeler/{id}/pasif
+    @PatchMapping("/{id}/pasif")
+    public SabitOdemeResponse pasifeCek(@PathVariable Long id) {
+        Long kullaniciId = CurrentUser.id();
+        return service.setAktif(kullaniciId, id, false);
+    }
+
+    // PATCH /api/sabitodemeler/{id}/aktif
+    @PatchMapping("/{id}/aktif")
+    public SabitOdemeResponse aktifeAl(@PathVariable Long id) {
+        Long kullaniciId = CurrentUser.id();
+        return service.setAktif(kullaniciId, id, true);
+    }
+
 }

@@ -6,6 +6,9 @@ import com.example.finansapii.entity.*;
 import com.example.finansapii.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -61,6 +64,60 @@ public class TaksitService {
                 .map(this::toResponse)
                 .toList();
     }
+    @Transactional
+    public TaksitResponse finishNow(Long kullaniciId, Long taksitId) {
+
+        Taksit t = taksitRepository.findByIdAndKullaniciId(taksitId, kullaniciId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Taksit bulunamadı"));
+
+        if (Boolean.TRUE.equals(t.getBittiMi())) {
+            // Zaten bittiyse aynı işlemi tekrar yapmasın
+            return toResponse(t);
+        }
+
+        // Kategori: Diğer Giderler (GIDER)
+        Kategori digerGider = kategoriRepository
+                .findByKategoriAdAndTip("Diğer Giderler", "GIDER")
+                .orElseThrow(() -> new IllegalArgumentException("Kategori bulunamadı: Diğer Giderler (GIDER)"));
+
+        // Toplam tutar = taksitSayisi * tutar (senin isteğin)
+        BigDecimal total = t.getTutar().multiply(BigDecimal.valueOf(t.getTaksitSayisi()));
+
+        LocalDate today = LocalDate.now();
+
+        // İşlem kaydı (tek seferlik)
+        Islem islem = new Islem();
+        islem.setKullaniciId(t.getKullaniciId());
+        islem.setAileId(t.getAileId());
+        islem.setKategoriId(digerGider.getId());
+        islem.setKategoriAdiSnapshot(digerGider.getKategoriAd());
+        islem.setTutar(total);
+        islem.setParaBirimi(t.getParaBirimi());
+        islem.setIslemTarihi(LocalDateTime.of(today.getYear(), today.getMonth(), today.getDayOfMonth(), 12, 0));
+        islem.setAciklama("Taksit kapatma (tek seferde): " + t.getTaksitBasligi()
+                + " (Toplam: " + t.getTaksitSayisi() + "x)");
+
+        Islem savedIslem = islemRepository.save(islem);
+
+        // Log: “kapatma” işlemi için tek bir satır yazalım
+        // taksitNo = taksitSayisi gibi işaretleyelim, vadeTarihi = today (kapatma günü)
+        // (Log tablon bu değerleri kabul ediyor diye varsayıyorum.)
+        if (!logRepository.existsByTaksitIdAndVadeTarihi(t.getId(), today)) {
+            TaksitIslemLog log = new TaksitIslemLog();
+            log.setTaksitId(t.getId());
+            log.setVadeTarihi(today);
+            log.setTaksitNo(t.getTaksitSayisi()); // sembolik
+            log.setIslemId(savedIslem.getId());
+            logRepository.save(log);
+        }
+
+        // Taksiti bitir
+        t.setBittiMi(true);
+        taksitRepository.save(t);
+
+        return toResponse(t);
+    }
+
 
     /**
      * ✅ Günlük otomatik üretim:
