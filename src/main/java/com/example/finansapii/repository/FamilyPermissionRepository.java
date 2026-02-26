@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.*;
 
-public interface FamilyPermissionRepository extends JpaRepository<FamilyPermission, Long> {
+public interface    FamilyPermissionRepository extends JpaRepository<FamilyPermission, Long> {
 
     Optional<FamilyPermission> findTopByFamilyIdAndRequesterUserIdOrderByCreatedAtDesc(
             Long familyId, Long requesterUserId);

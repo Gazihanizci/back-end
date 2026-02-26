@@ -42,7 +42,14 @@ public class YatirimHesapController {
     ) {
         return service.updateGuncelFiyat(yatirimId, req);
     }
-
+    // ✅ Hesap adı güncelle
+    @PutMapping("/mine/{yatirimId}/hesap-adi")
+    public YatirimHesapResponse updateHesapAdi(
+            @PathVariable Long yatirimId,
+            @RequestBody YatirimHesapAdiUpdateRequest req
+    ) {
+        return service.updateHesapAdi(yatirimId, req);
+    }
     // ✅ Adet artır/azalt (ekleme/çıkarma)
     @PutMapping("/mine/{yatirimId}/adet-degis")
     public YatirimHesapResponse changeAdet(

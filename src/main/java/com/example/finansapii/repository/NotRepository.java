@@ -8,7 +8,11 @@ import java.util.Optional;
 
 public interface NotRepository extends JpaRepository<Not, Long> {
 
+    // USER notları
     List<Not> findByKullaniciIdOrderByNotIdDesc(Long kullaniciId);
-
     Optional<Not> findByNotIdAndKullaniciId(Long notId, Long kullaniciId);
+
+    // FAMILY notları
+    List<Not> findByAileIdOrderByNotIdDesc(Long aileId);
+    Optional<Not> findByNotIdAndAileId(Long notId, Long aileId);
 }

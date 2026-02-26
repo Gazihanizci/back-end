@@ -5,5 +5,7 @@ import java.time.LocalDateTime;
 public record NotResponse(
         Long notId,
         String notMetini,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        NotTuru notTuru,
+        Long aileId
 ) { }

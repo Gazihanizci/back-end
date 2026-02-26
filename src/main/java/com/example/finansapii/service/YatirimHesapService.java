@@ -55,7 +55,18 @@ public class YatirimHesapService {
                 .orElseThrow(() -> new RuntimeException("Yatırım hesabı bulunamadı: " + yatirimId));
         return toResponse(y);
     }
+    @Transactional
+    public YatirimHesapResponse updateHesapAdi(Long yatirimId, YatirimHesapAdiUpdateRequest req) {
 
+        Long kullaniciId = CurrentUser.id();
+
+        YatirimHesap y = repo.findByYatirimIdAndKullaniciId(yatirimId, kullaniciId)
+                .orElseThrow(() -> new RuntimeException("Yatırım hesabı bulunamadı: " + yatirimId));
+
+        y.setHesapAdi(req.hesapAdi().trim());
+
+        return toResponse(repo.save(y));
+    }
     @Transactional
     public YatirimHesapResponse updateGuncelFiyat(Long yatirimId, YatirimGuncelFiyatUpdateRequest req) {
         Long kullaniciId = CurrentUser.id();
