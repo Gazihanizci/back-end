@@ -25,4 +25,15 @@ public class PortfoyController {
                 .filter(p -> p.getKullaniciId().equals(userId))
                 .toList();
     }
+
+    // 🔥 YENİ EKLENEN SİLME ENDPOINTİ
+    @DeleteMapping("/{portfoyId}")
+    public void deletePortfolio(@PathVariable Long portfoyId) {
+
+        Long userId = CurrentUser.id();
+
+        portfoyRepository.findById(portfoyId)
+                .filter(p -> p.getKullaniciId().equals(userId))
+                .ifPresent(portfoyRepository::delete);
+    }
 }

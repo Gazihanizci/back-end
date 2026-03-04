@@ -10,7 +10,9 @@ import java.util.Optional;
 import java.util.List;
 
 public interface SabitOdemeRepository extends JpaRepository<SabitOdeme, Long> {
+
     List<SabitOdeme> findByKullaniciIdOrderBySonOdemeGunuAsc(Long kullaniciId);
+
     Optional<SabitOdeme> findByOdemeIdAndKullaniciId(Long odemeId, Long kullaniciId);
 
     @Modifying
@@ -19,5 +21,14 @@ public interface SabitOdemeRepository extends JpaRepository<SabitOdeme, Long> {
                  @Param("kullaniciId") Long kullaniciId,
                  @Param("aktif") Boolean aktif);
 
+    // 🔥 YENİ EKLENEN
+    @Modifying
+    @Query("""
+    UPDATE SabitOdeme s
+    SET s.aktif = false
+    WHERE s.aktif = true
+    AND s.sonOdemeGunu < CURRENT_DATE
+    """)
+    int pasifYapSonTarihiGecenler();
 }
 
