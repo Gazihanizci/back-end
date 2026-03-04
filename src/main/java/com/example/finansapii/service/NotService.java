@@ -17,10 +17,16 @@ public class NotService {
 
     private final NotRepository notRepository;
     private final UserRepository userRepository;
+    private final FamilyNotePermissionService familyNotePermissionService;
 
-    public NotService(NotRepository notRepository, UserRepository userRepository) {
+    public NotService(
+            NotRepository notRepository,
+            UserRepository userRepository,
+            FamilyNotePermissionService familyNotePermissionService
+    ) {
         this.notRepository = notRepository;
         this.userRepository = userRepository;
+        this.familyNotePermissionService = familyNotePermissionService;
     }
 
     private Long getUserAileIdOrThrow(Long currentUserId) {
@@ -54,6 +60,12 @@ public class NotService {
 
         if (req.notTuru() == NotTuru.FAMILY) {
             Long aileId = getUserAileIdOrThrow(currentUserId);
+
+            boolean canWrite = familyNotePermissionService.canWriteFamilyNote(currentUserId, aileId);
+            if (!canWrite) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Aile notu yazma izniniz yok. Önce izin isteyin.");
+            }
+
             n.setAileId(aileId);
         } else {
             n.setAileId(null);
@@ -108,6 +120,13 @@ public class NotService {
     @Transactional
     public NotResponse updateFamily(Long currentUserId, Long notId, NotUpdateRequest req) {
         Long aileId = getUserAileIdOrThrow(currentUserId);
+
+        // İstersen update için de yazma izni şart koş:
+        boolean canWrite = familyNotePermissionService.canWriteFamilyNote(currentUserId, aileId);
+        if (!canWrite) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Aile notu düzenleme izniniz yok.");
+        }
+
         Not n = notRepository.findByNotIdAndAileId(notId, aileId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Aile notu bulunamadı"));
         n.setNotMetini(req.notMetini().trim());
@@ -126,6 +145,13 @@ public class NotService {
     @Transactional
     public void deleteFamily(Long currentUserId, Long notId) {
         Long aileId = getUserAileIdOrThrow(currentUserId);
+
+        // silme için de izin şart olsun:
+        boolean canWrite = familyNotePermissionService.canWriteFamilyNote(currentUserId, aileId);
+        if (!canWrite) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Aile notu silme izniniz yok.");
+        }
+
         Not n = notRepository.findByNotIdAndAileId(notId, aileId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Aile notu bulunamadı"));
         notRepository.delete(n);
